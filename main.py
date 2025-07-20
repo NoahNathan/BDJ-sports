@@ -40,7 +40,15 @@ def get_session_cookie():
         page.fill('input[name="Password"]', PASSWORD)
         page.click('button[type="submit"]')
 
-        page.wait_for_url("**/Dashboard", timeout=10000)
+        try:
+            page.wait_for_url("**/Dashboard", timeout=10000)
+            print("✅ Login redirect success")
+        except Exception:
+            print("⚠️ Timeout waiting for redirect — checking current URL manually:")
+            print("📍 Current URL:", page.url)
+            print("🧾 Page HTML:")
+            print(page.content()[:500])  # print first 500 chars of page
+            raise Exception("❌ Login failed or redirected to unexpected page")
 
         cookies = page.context.cookies()
         session_cookie = next(
