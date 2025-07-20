@@ -135,6 +135,7 @@ def main():
                 ),
             }
 
+            print("📅 Using calendar ID:", CALENDAR_ID)
             created = service.events().insert(calendarId=CALENDAR_ID, body=event).execute()
             print(f"✅ Added: {summary} on {start_dt.strftime('%A, %b %d at %I:%M %p')}")
 
