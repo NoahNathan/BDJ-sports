@@ -51,6 +51,9 @@ def get_session_cookie():
 
     resp = session.post(login_url, data=payload, headers=headers, allow_redirects=True)
     if "Dashboard" not in resp.url:
+        print("🔍 Login response URL:", resp.url)
+        print("🔍 Login response HTML (truncated):")
+        print(resp.text[:500])  # Show the first 500 characters of the page
         raise Exception("❌ Login failed. Check credentials.")
 
     cookie = session.cookies.get(".AspNet.ApplicationCookie")
