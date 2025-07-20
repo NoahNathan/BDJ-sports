@@ -21,7 +21,12 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run sync script
+              - name: Run sync script
         env:
-          SESSION_COOKIE: ${{ secrets.SESSION_COOKIE }}
+          GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
           CALENDAR_ID: ${{ secrets.CALENDAR_ID }}
+          USERNAME: ${{ secrets.USERNAME }}
+          PASSWORD: ${{ secrets.PASSWORD }}
         run: python main.py
+
+        
