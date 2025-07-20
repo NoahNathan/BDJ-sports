@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Subscribe to the BDJ-ish Sports Calendar</title>
+  <style>
+    :root {
+      --bdj-blue: #0d3d74;
+      --bdj-gold: #c59734;
+      --bdj-light: #f8f6f3;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 3em;
+      background-color: var(--bdj-light);
+      color: var(--bdj-blue);
+    }
+
+    h1 {
+      color: var(--bdj-blue);
+      font-size: 2em;
+    }
+
+    p {
+      color: #333;
+      font-size: 1.1em;
+      max-width: 600px;
+      margin: 0 auto 2em;
+    }
+
+    form {
+      margin-top: 2em;
+    }
+
+    input[type="email"] {
+      padding: 0.7em;
+      font-size: 1em;
+      margin: 0.5em;
+      border: 1px solid var(--bdj-blue);
+      border-radius: 4px;
+      width: 280px;
+      max-width: 90%;
+    }
+
+    button {
+      padding: 0.7em 1.5em;
+      font-size: 1em;
+      background-color: var(--bdj-gold);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #b6862e;
+    }
+
+    .subscribe-link {
+      margin-top: 2em;
+      display: inline-block;
+      background-color: var(--bdj-blue);
+      color: white;
+      padding: 0.75em 1.5em;
+      text-decoration: none;
+      border-radius: 6px;
+      font-size: 1.1em;
+    }
+
+    .subscribe-link:hover {
+      background-color: #0a2f5a;
+    }
+  </style>
+</head>
+<body>
+  <h1>📅 Subscribe to the BDJ-ish Sports Calendar</h1>
+  <p>Get all upcoming BDJ team games added automatically to your calendar — and let us know you joined so we can keep you in the loop!</p>
+
+  <!-- Replace the form action with your actual Formspree form ID -->
+  <form action="https://formspree.io/f/YOUR_FORM_ID" method="POST">
+    <input type="email" name="email" placeholder="Your email address" required />
+    <button type="submit">Let me know you subscribed</button>
+  </form>
+
+  <a
+    class="subscribe-link"
+    href="https://calendar.google.com/calendar/u/0?cid=e1d7bf24d4d0a6feef5587fcaaac5748947b9b7ba57736aa532099b206d9d945@group.calendar.google.com"
+    target="_blank"
+  >
+    📥 Subscribe to Calendar
+  </a>
+</body>
+</html>
