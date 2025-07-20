@@ -7,6 +7,7 @@ import requests
 from datetime import datetime, timedelta
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
+from playwright.sync_api import sync_playwright
 
 # ---- CONFIG ----
 PLAYER_ID = 122377
@@ -25,42 +26,35 @@ def authenticate_google_service():
     return build("calendar", "v3", credentials=creds)
 
 # ---- LOGIN TO LASN ----
+
 def get_session_cookie():
-    session = requests.Session()
-    login_url = "https://register.lasportsnet.com/Account/Login"
-    headers = {
-        "User-Agent": "Mozilla/5.0",
-        "Content-Type": "application/x-www-form-urlencoded"
-    }
+    print("🧪 Logging in via Playwright...")
 
-    resp = session.get(login_url, headers=headers)
-    token_match = re.search(
-        r'name="__RequestVerificationToken" type="hidden" value="([^"]+)"',
-        resp.text
-    )
-    if not token_match:
-        raise Exception("❌ CSRF token not found")
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
 
-    csrf_token = token_match.group(1)
-    payload = {
-        "__RequestVerificationToken": csrf_token,
-        "Email": USERNAME,
-        "Password": PASSWORD,
-        "RememberMe": "false"
-    }
+        page.goto("https://register.lasportsnet.com/Account/Login")
 
-    resp = session.post(login_url, data=payload, headers=headers, allow_redirects=True)
-    if "Dashboard" not in resp.url:
-        print("🔍 Login response URL:", resp.url)
-        print("🔍 Login response HTML (truncated):")
-        print(resp.text[:500])  # Show the first 500 characters of the page
-        raise Exception("❌ Login failed. Check credentials.")
+        page.fill('input[name="Email"]', USERNAME)
+        page.fill('input[name="Password"]', PASSWORD)
+        page.click('button[type="submit"]')
 
-    cookie = session.cookies.get(".AspNet.ApplicationCookie")
-    if not cookie:
-        raise Exception("❌ Session cookie not found after login")
+        page.wait_for_url("**/Dashboard", timeout=10000)
 
-    return cookie
+        cookies = page.context.cookies()
+        session_cookie = next(
+            (c["value"] for c in cookies if c["name"] == ".AspNet.ApplicationCookie"),
+            None
+        )
+
+        browser.close()
+
+        if not session_cookie:
+            raise Exception("❌ Failed to retrieve session cookie via Playwright.")
+
+        print("✅ Session cookie acquired via Playwright")
+        return session_cookie
 
 # ---- FETCH TEAMS ----
 def fetch_teams(player_id, session_cookie):
