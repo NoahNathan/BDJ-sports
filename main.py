@@ -23,6 +23,21 @@ def authenticate_google_service():
     )
     return build("calendar", "v3", credentials=creds)
 
+def delete_all_events(service, calendar_id):
+    print("🧨 Deleting all existing events...")
+    page_token = None
+    while True:
+        events = service.events().list(calendarId=calendar_id, pageToken=page_token).execute()
+        for event in events.get('items', []):
+            try:
+                service.events().delete(calendarId=calendar_id, eventId=event['id']).execute()
+                print(f"❌ Deleted: {event.get('summary')}")
+            except Exception as e:
+                print(f"⚠️ Could not delete event: {e}")
+        page_token = events.get('nextPageToken')
+        if not page_token:
+            break
+
 # ---- FETCH TEAMS ----
 def fetch_teams(player_id, session_cookie):
     url = f"https://register.lasportsnet.com/api/PlayerTeams/GetPlayerTeams?playerID={player_id}&showActiveOnly=true"
@@ -99,6 +114,7 @@ def event_exists(service, calendar_id, summary, start_time):
 def main():
     service = authenticate_google_service()
     session_cookie = SESSION_COOKIE
+    delete_all_events(service, CALENDAR_ID)
 
     print("📆 Fetching your teams...")
     teams = fetch_teams(PLAYER_ID, session_cookie)
