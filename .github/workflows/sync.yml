@@ -19,15 +19,11 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
-          pip install playwright
-          playwright install --with-deps
+        run: pip install -r requirements.txt
 
       - name: Run sync script
         env:
           GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
           CALENDAR_ID: ${{ secrets.CALENDAR_ID }}
-          USERNAME: ${{ secrets.USERNAME }}
-          PASSWORD: ${{ secrets.PASSWORD }}
+          SESSION_COOKIE: ${{ secrets.SESSION_COOKIE }}
         run: python main.py
