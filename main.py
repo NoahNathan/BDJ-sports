@@ -1,17 +1,30 @@
 import os
+import re
+import json
+import base64
 import pickle
 import requests
 from datetime import datetime, timedelta
-from google.auth.transport.requests import Request
-from google_auth_oauthlib.flow import InstalledAppFlow
+from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
 # ---- CONFIG ----
 PLAYER_ID = 122377
-SCOPES = ['https://www.googleapis.com/auth/calendar']
 CALENDAR_ID = os.environ["CALENDAR_ID"]
+USERNAME = os.environ["USERNAME"]
+PASSWORD = os.environ["PASSWORD"]
 
-# ---- LOGIN & COOKIE RETRIEVAL ----
+# ---- SERVICE ACCOUNT AUTH ----
+def authenticate_google_service():
+    print("🔐 Authenticating with Google Service Account...")
+    creds_json = json.loads(os.environ["GOOGLE_CREDENTIALS_JSON"])
+    creds = service_account.Credentials.from_service_account_info(
+        creds_json,
+        scopes=["https://www.googleapis.com/auth/calendar"]
+    )
+    return build("calendar", "v3", credentials=creds)
+
+# ---- LOGIN TO LASN ----
 def get_session_cookie():
     session = requests.Session()
     login_url = "https://register.lasportsnet.com/Account/Login"
@@ -20,26 +33,23 @@ def get_session_cookie():
         "Content-Type": "application/x-www-form-urlencoded"
     }
 
-    # Step 1: Get CSRF token
     resp = session.get(login_url, headers=headers)
-    if "__RequestVerificationToken" not in resp.text:
-        raise Exception("❌ Unable to load login page")
-
-    import re
-    token_match = re.search(r'name="__RequestVerificationToken" type="hidden" value="([^"]+)"', resp.text)
+    token_match = re.search(
+        r'name="__RequestVerificationToken" type="hidden" value="([^"]+)"',
+        resp.text
+    )
     if not token_match:
         raise Exception("❌ CSRF token not found")
-    csrf_token = token_match.group(1)
 
-    # Step 2: Submit login form
+    csrf_token = token_match.group(1)
     payload = {
         "__RequestVerificationToken": csrf_token,
-        "Email": os.environ["USERNAME"],
-        "Password": os.environ["PASSWORD"],
+        "Email": USERNAME,
+        "Password": PASSWORD,
         "RememberMe": "false"
     }
-    resp = session.post(login_url, data=payload, headers=headers, allow_redirects=True)
 
+    resp = session.post(login_url, data=payload, headers=headers, allow_redirects=True)
     if "Dashboard" not in resp.url:
         raise Exception("❌ Login failed. Check credentials.")
 
@@ -49,33 +59,13 @@ def get_session_cookie():
 
     return cookie
 
-# ---- GOOGLE CALENDAR AUTH ----
-def authenticate_google():
-    creds = None
-    if os.path.exists('token.pkl'):
-        with open('token.pkl', 'rb') as token:
-            creds = pickle.load(token)
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            flow = InstalledAppFlow.from_client_secrets_file(
-                'credentials.json', SCOPES, redirect_uri='http://localhost'
-            )
-            auth_url, _ = flow.authorization_url(prompt='consent')
-            print("🔗 Go to this link in your browser:")
-            print(auth_url)
-            code = input("📥 Paste the auth code here: ")
-            flow.fetch_token(code=code)
-            creds = flow.credentials
-        with open('token.pkl', 'wb') as token:
-            pickle.dump(creds, token)
-    return creds
-
 # ---- FETCH TEAMS ----
 def fetch_teams(player_id, session_cookie):
     url = f"https://register.lasportsnet.com/api/PlayerTeams/GetPlayerTeams?playerID={player_id}&showActiveOnly=true"
-    headers = {"User-Agent": "Mozilla/5.0", "Cookie": f".AspNet.ApplicationCookie={session_cookie}"}
+    headers = {
+        "User-Agent": "Mozilla/5.0",
+        "Cookie": f".AspNet.ApplicationCookie={session_cookie}"
+    }
     response = requests.get(url, headers=headers)
     teams = []
 
@@ -104,7 +94,11 @@ def fetch_teams(player_id, session_cookie):
 # ---- FETCH SCHEDULE ----
 def fetch_full_schedule(team_id, season_id, session_cookie):
     url = f"https://register.lasportsnet.com/api/games?seasonID={season_id}&teamID={team_id}&isSchedule=true"
-    headers = {"User-Agent": "Mozilla/5.0", "Cookie": f".AspNet.ApplicationCookie={session_cookie}"}
+    headers = {
+        "User-Agent": "Mozilla/5.0",
+        "Cookie": f".AspNet.ApplicationCookie={session_cookie}"
+    }
+
     response = requests.get(url, headers=headers)
     games = []
     if response.ok:
@@ -146,11 +140,7 @@ def event_exists(service, calendar_id, summary, start_time):
 
 # ---- MAIN ----
 def main():
-    print("🔐 Authenticating with Google...")
-    creds = authenticate_google()
-    service = build("calendar", "v3", credentials=creds)
-
-    print("🔑 Logging into LASN...")
+    service = authenticate_google_service()
     session_cookie = get_session_cookie()
 
     print("📆 Fetching your teams...")
