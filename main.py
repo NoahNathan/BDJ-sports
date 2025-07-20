@@ -27,6 +27,8 @@ def authenticate_google_service():
 
 # ---- LOGIN TO LASN ----
 
+from playwright.sync_api import sync_playwright
+
 def get_session_cookie():
     print("🧪 Logging in via Playwright...")
 
@@ -38,17 +40,15 @@ def get_session_cookie():
 
         page.fill('input[name="Email"]', USERNAME)
         page.fill('input[name="Password"]', PASSWORD)
-        page.click('button[type="submit"]')
 
-        try:
-            page.wait_for_url("**/Dashboard", timeout=10000)
-            print("✅ Login redirect success")
-        except Exception:
-            print("⚠️ Timeout waiting for redirect — checking current URL manually:")
-            print("📍 Current URL:", page.url)
-            print("🧾 Page HTML:")
-            print(page.content()[:500])  # print first 500 chars of page
-            raise Exception("❌ Login failed or redirected to unexpected page")
+        # Use JS submit instead of button click (more reliable)
+        page.evaluate("document.querySelector('form').submit()")
+
+        # Wait until we're either on dashboard or something else
+        page.wait_for_timeout(3000)  # give it 3s to redirect
+
+        final_url = page.url
+        print(f"📍 Final URL after login attempt: {final_url}")
 
         cookies = page.context.cookies()
         session_cookie = next(
