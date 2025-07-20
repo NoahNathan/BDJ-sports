@@ -1,4 +1,4 @@
-# FINAL main.py (clean with deduplication and cleanup)
+# FINAL main.py (always delete all events before sync)
 
 import os
 import json
@@ -22,21 +22,20 @@ def authenticate_google_service():
     )
     return build("calendar", "v3", credentials=creds)
 
-# ---- DELETE DUPLICATE EVENTS ----
-def delete_existing_synced_events(service, calendar_id):
-    print("🧹 Cleaning up old synced events...")
+# ---- DELETE ALL EVENTS ----
+def delete_all_events(service, calendar_id):
+    print("🧨 Deleting ALL events in the calendar...")
     page_token = None
     while True:
         events = service.events().list(
             calendarId=calendar_id,
-            pageToken=page_token,
-            privateExtendedProperty="synced_by=bdj-sync-script"
+            pageToken=page_token
         ).execute()
 
         for event in events.get('items', []):
             try:
                 service.events().delete(calendarId=calendar_id, eventId=event['id']).execute()
-                print(f"❌ Deleted duplicate: {event.get('summary')}")
+                print(f"❌ Deleted: {event.get('summary')}")
             except Exception as e:
                 print(f"⚠️ Could not delete event: {e}")
 
@@ -95,35 +94,13 @@ def fetch_full_schedule(team_id, season_id, session_cookie):
                     })
     return games
 
-# ---- CHECK FOR DUPLICATES ----
-def event_exists(service, calendar_id, summary, start_time):
-    time_min = start_time.isoformat() + "Z"
-    time_max = (start_time + timedelta(minutes=1)).isoformat() + "Z"
-
-    try:
-        events_result = service.events().list(
-            calendarId=calendar_id,
-            timeMin=time_min,
-            timeMax=time_max,
-            singleEvents=True
-        ).execute()
-
-        for event in events_result.get("items", []):
-            tag = event.get("extendedProperties", {}).get("private", {}).get("synced_by")
-            if tag == "bdj-sync-script":
-                return True
-        return False
-    except Exception as e:
-        print("❌ Error checking duplicates:", e)
-        return False
-
 # ---- MAIN ----
 def main():
     service = authenticate_google_service()
     session_cookie = SESSION_COOKIE
 
-    # Wipe any previously synced events
-    delete_existing_synced_events(service, CALENDAR_ID)
+    # Delete all calendar events every time
+    delete_all_events(service, CALENDAR_ID)
 
     print("📆 Fetching your teams...")
     teams = fetch_teams(PLAYER_ID, session_cookie)
@@ -140,10 +117,6 @@ def main():
             start_dt = game["datetime"]
             end_dt = start_dt + timedelta(hours=1)
 
-            if event_exists(service, CALENDAR_ID, summary, start_dt):
-                print(f"⏭️ Skipping duplicate: {summary} on {start_dt}")
-                continue
-
             event = {
                 "summary": summary,
                 "location": f"Field {game['field']}" if game["field"] else "TBD",
@@ -157,12 +130,7 @@ def main():
                 },
                 "description": "Playoff Game" if game["is_playoff"] else (
                     "Championship Game" if game["is_championship"] else "Regular Season Game"
-                ),
-                "extendedProperties": {
-                    "private": {
-                        "synced_by": "bdj-sync-script"
-                    }
-                }
+                )
             }
 
             created = service.events().insert(calendarId=CALENDAR_ID, body=event).execute()
