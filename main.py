@@ -1,8 +1,7 @@
-# FINAL main.py (manual session cookie)
+# FINAL main.py (clean with deduplication and cleanup)
 
 import os
 import json
-import pickle
 import requests
 from datetime import datetime, timedelta
 from google.oauth2 import service_account
@@ -22,6 +21,28 @@ def authenticate_google_service():
         scopes=["https://www.googleapis.com/auth/calendar"]
     )
     return build("calendar", "v3", credentials=creds)
+
+# ---- DELETE DUPLICATE EVENTS ----
+def delete_existing_synced_events(service, calendar_id):
+    print("🧹 Cleaning up old synced events...")
+    page_token = None
+    while True:
+        events = service.events().list(
+            calendarId=calendar_id,
+            pageToken=page_token,
+            privateExtendedProperty="synced_by=bdj-sync-script"
+        ).execute()
+
+        for event in events.get('items', []):
+            try:
+                service.events().delete(calendarId=calendar_id, eventId=event['id']).execute()
+                print(f"❌ Deleted duplicate: {event.get('summary')}")
+            except Exception as e:
+                print(f"⚠️ Could not delete event: {e}")
+
+        page_token = events.get('nextPageToken')
+        if not page_token:
+            break
 
 # ---- FETCH TEAMS ----
 def fetch_teams(player_id, session_cookie):
@@ -88,7 +109,8 @@ def event_exists(service, calendar_id, summary, start_time):
         ).execute()
 
         for event in events_result.get("items", []):
-            if summary.lower() in event.get("summary", "").lower():
+            tag = event.get("extendedProperties", {}).get("private", {}).get("synced_by")
+            if tag == "bdj-sync-script":
                 return True
         return False
     except Exception as e:
@@ -99,6 +121,9 @@ def event_exists(service, calendar_id, summary, start_time):
 def main():
     service = authenticate_google_service()
     session_cookie = SESSION_COOKIE
+
+    # Wipe any previously synced events
+    delete_existing_synced_events(service, CALENDAR_ID)
 
     print("📆 Fetching your teams...")
     teams = fetch_teams(PLAYER_ID, session_cookie)
@@ -133,9 +158,13 @@ def main():
                 "description": "Playoff Game" if game["is_playoff"] else (
                     "Championship Game" if game["is_championship"] else "Regular Season Game"
                 ),
+                "extendedProperties": {
+                    "private": {
+                        "synced_by": "bdj-sync-script"
+                    }
+                }
             }
 
-            print("📅 Using calendar ID:", CALENDAR_ID)
             created = service.events().insert(calendarId=CALENDAR_ID, body=event).execute()
             print(f"✅ Added: {summary} on {start_dt.strftime('%A, %b %d at %I:%M %p')}")
 
