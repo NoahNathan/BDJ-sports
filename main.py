@@ -1,21 +1,19 @@
+# FINAL main.py (manual session cookie)
+
 import os
-import re
 import json
-import base64
 import pickle
 import requests
 from datetime import datetime, timedelta
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
-from playwright.sync_api import sync_playwright
 
 # ---- CONFIG ----
 PLAYER_ID = 122377
 CALENDAR_ID = os.environ["CALENDAR_ID"]
-USERNAME = os.environ["USERNAME"]
-PASSWORD = os.environ["PASSWORD"]
+SESSION_COOKIE = os.environ["SESSION_COOKIE"]
 
-# ---- SERVICE ACCOUNT AUTH ----
+# ---- GOOGLE SERVICE ACCOUNT AUTH ----
 def authenticate_google_service():
     print("🔐 Authenticating with Google Service Account...")
     creds_json = json.loads(os.environ["GOOGLE_CREDENTIALS_JSON"])
@@ -25,44 +23,10 @@ def authenticate_google_service():
     )
     return build("calendar", "v3", credentials=creds)
 
-# ---- LOGIN TO LASN ----
-
-def get_session_cookie():
-    print("🧪 Logging in via Playwright...")
-
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        page = browser.new_page()
-
-        page.goto("https://register.lasportsnet.com/Account/Login")
-
-        page.fill('input[name="Email"]', USERNAME)
-        page.fill('input[name="Password"]', PASSWORD)
-
-        with page.expect_navigation(url="**/Dashboard", timeout=10000):
-            page.click('button[type="submit"]')
-
-        cookies = page.context.cookies()
-        session_cookie = next(
-            (c["value"] for c in cookies if c["name"] == ".AspNet.ApplicationCookie"),
-            None
-        )
-
-        browser.close()
-
-        if not session_cookie:
-            raise Exception("❌ Failed to retrieve session cookie via Playwright.")
-
-        print("✅ Session cookie acquired via Playwright")
-        return session_cookie
-        
 # ---- FETCH TEAMS ----
 def fetch_teams(player_id, session_cookie):
     url = f"https://register.lasportsnet.com/api/PlayerTeams/GetPlayerTeams?playerID={player_id}&showActiveOnly=true"
-    headers = {
-        "User-Agent": "Mozilla/5.0",
-        "Cookie": f".AspNet.ApplicationCookie={session_cookie}"
-    }
+    headers = {"User-Agent": "Mozilla/5.0", "Cookie": f".AspNet.ApplicationCookie={session_cookie}"}
     response = requests.get(url, headers=headers)
     teams = []
 
@@ -91,11 +55,7 @@ def fetch_teams(player_id, session_cookie):
 # ---- FETCH SCHEDULE ----
 def fetch_full_schedule(team_id, season_id, session_cookie):
     url = f"https://register.lasportsnet.com/api/games?seasonID={season_id}&teamID={team_id}&isSchedule=true"
-    headers = {
-        "User-Agent": "Mozilla/5.0",
-        "Cookie": f".AspNet.ApplicationCookie={session_cookie}"
-    }
-
+    headers = {"User-Agent": "Mozilla/5.0", "Cookie": f".AspNet.ApplicationCookie={session_cookie}"}
     response = requests.get(url, headers=headers)
     games = []
     if response.ok:
@@ -138,7 +98,7 @@ def event_exists(service, calendar_id, summary, start_time):
 # ---- MAIN ----
 def main():
     service = authenticate_google_service()
-    session_cookie = get_session_cookie()
+    session_cookie = SESSION_COOKIE
 
     print("📆 Fetching your teams...")
     teams = fetch_teams(PLAYER_ID, session_cookie)
