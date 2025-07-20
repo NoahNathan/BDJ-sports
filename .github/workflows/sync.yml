@@ -1,0 +1,27 @@
+name: Sync LASN to Google Calendar
+
+on:
+  schedule:
+    - cron: '0 7 * * *'  # every day at 7am UTC
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run sync script
+        env:
+          SESSION_COOKIE: ${{ secrets.SESSION_COOKIE }}
+          CALENDAR_ID: ${{ secrets.CALENDAR_ID }}
+        run: python main.py
