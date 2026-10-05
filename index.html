@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BDJ Sports Calendar</title>
+<style>
+  body { font-family: -apple-system, system-ui, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 16px; line-height: 1.5; color: #1c1c1e; }
+  h1 { font-size: 1.5rem; margin-bottom: 4px; }
+  p.sub { margin-top: 0; color: #636366; }
+  a.btn { display: block; text-align: center; padding: 14px; margin: 12px 0; border-radius: 12px; background: #0a84ff; color: #fff; text-decoration: none; font-weight: 600; }
+  a.btn.alt { background: #e5e5ea; color: #1c1c1e; }
+  small { color: #636366; }
+  code { word-break: break-all; font-size: 0.8rem; }
+  @media (prefers-color-scheme: dark) { body { background: #000; color: #f2f2f7; } p.sub, small { color: #98989d; } a.btn.alt { background: #2c2c2e; color: #f2f2f7; } }
+</style>
+</head>
+<body>
+<h1>BDJ Sports Calendar</h1>
+<p class="sub">Soccer and softball games, in your phone's calendar.</p>
+
+<a class="btn" id="subscribe" href="webcal://calendar.google.com/calendar/ical/e1d7bf24d4d0a6feef5587fcaaac5748947b9b7ba57736aa532099b206d9d945%40group.calendar.google.com/public/basic.ics">Subscribe (iPhone / Apple Calendar)</a>
+<a class="btn alt" href="https://calendar.google.com/calendar/u/0?cid=ZTFkN2JmMjRkNGQwYTZmZWVmNTU4N2ZjYWFhYzU3NDg5NDdiOWI3YmE1NzczNmFhNTMyMDk5YjIwNmQ5ZDk0NUBncm91cC5jYWxlbmRhci5nb29nbGUuY29t">Add to Google Calendar (Android)</a>
+
+<p><small>If nothing happens on iPhone, go to Settings &gt; Calendar &gt; Accounts &gt; Add Account &gt; Other &gt; Add Subscribed Calendar and paste:<br>
+<code>https://calendar.google.com/calendar/ical/e1d7bf24d4d0a6feef5587fcaaac5748947b9b7ba57736aa532099b206d9d945%40group.calendar.google.com/public/basic.ics</code></small></p>
+<p><small>Games update automatically. Your phone may take a few hours to show changes.</small></p>
+
+<script>
+  // On iPhones, jump straight to the Subscribe prompt.
+  if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
+    window.location.href = document.getElementById("subscribe").href;
+  }
+</script>
+</body>
+</html>
