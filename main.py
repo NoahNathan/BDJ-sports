@@ -9,6 +9,8 @@ from googleapiclient.discovery import build
 
 # ---- CONFIG ----
 PLAYER_ID = 122377
+# Teams to include in addition to the ones the player is rostered on
+EXTRA_TEAM_IDS = [51225]
 CALENDAR_ID = os.environ["CALENDAR_ID"]
 SESSION_COOKIE = os.environ["SESSION_COOKIE"]
 
@@ -70,6 +72,30 @@ def fetch_teams(player_id, session_cookie):
                         })
                 except Exception as e:
                     print(f"❌ Error parsing season info for '{team_name}':", e)
+
+    known_ids = {t["team_id"] for t in teams}
+    for team_id in EXTRA_TEAM_IDS:
+        if team_id in known_ids:
+            continue
+        season_resp = requests.get(f"https://register.lasportsnet.com/api/teams?id={team_id}", headers=headers)
+        if not season_resp.ok:
+            print(f"❌ Could not load extra team {team_id} (HTTP {season_resp.status_code})")
+            continue
+        try:
+            season_data = season_resp.json()
+            season_id = season_data.get("SeasonID")
+            team_name = season_data.get("TeamName") or season_data.get("Name") or f"Team {team_id}"
+            if season_id:
+                print(f"✅ Found seasonID={season_id} for extra team '{team_name}'")
+                teams.append({
+                    "team_name": team_name,
+                    "team_id": team_id,
+                    "season_id": season_id
+                })
+            else:
+                print(f"❌ No SeasonID returned for extra team {team_id}")
+        except Exception as e:
+            print(f"❌ Error parsing season info for extra team {team_id}:", e)
     return teams
 
 # ---- FETCH SCHEDULE ----
